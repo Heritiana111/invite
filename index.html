@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23D4204F' d='M12 21s-7.5-4.6-9.5-9.2C1 8.2 3.3 5 6.5 5c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3 3.200 0 5.5 3.2 4 6.8C19.5 16.4 12 21 12 21z'/%3E%3C/svg%3E">
+<title>Invite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: one left-aligned column. The headline leads, a single play area holds the two answers. */
+  :root {
+    color-scheme: light;
+    padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+    --bg: #FDF2F4;
+    --surface: #FFFFFF;
+    --fg: #2A1620;
+    --muted: #7A5964;
+    --line: #EBCDD4;
+    --accent: #D4204F;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #F27A97;
+    --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1B1015;
+      --surface: #26171E;
+      --fg: #FBE9EE;
+      --muted: #C09AA7;
+      --line: #43262F;
+      --accent: #FF6384;
+      --accent-ink: #2A0A14;
+      --accent-soft: #FFB0C0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1B1015;
+    --surface: #26171E;
+    --fg: #FBE9EE;
+    --muted: #C09AA7;
+    --line: #43262F;
+    --accent: #FF6384;
+    --accent-ink: #2A0A14;
+    --accent-soft: #FFB0C0;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    padding-block: 20px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .stage {
+    max-width: 40rem;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+  }
+
+  /* Request bar */
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+  .req { min-width: 0; overflow-wrap: anywhere; }
+  .pill {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .stage[data-state="done"] .dot { background: var(--accent); animation: none; }
+  @keyframes pulse { 50% { opacity: 0.25; } }
+
+  /* Question and answer */
+  .ask, .answer { display: flex; flex-direction: column; gap: 1.25rem; }
+  .hey {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(2.5rem, 12vw, 4.75rem);
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    font-variation-settings: "wdth" 80, "opsz" 96;
+    text-wrap: balance;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  h1:focus { outline: none; }
+  .lede {
+    margin: 0;
+    max-width: 30rem;
+    font-size: 1.1875rem;
+    color: var(--muted);
+  }
+
+  /* Play area */
+  .play { display: flex; flex-direction: column; gap: 0.75rem; }
+  .arena {
+    --grow: 0;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    min-height: 11rem;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .arena-label {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .btn {
+    font: inherit;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    min-height: 3rem;
+    padding: 0 1.5rem;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1), min-height 0.2s, padding 0.2s, font-size 0.2s, filter 0.15s;
+  }
+  .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .yes {
+    background: var(--accent);
+    color: var(--accent-ink);
+    min-height: calc(3rem + var(--grow) * 0.35rem);
+    padding-inline: calc(1.5rem + var(--grow) * 0.45rem);
+    font-size: calc(1.0625rem + var(--grow) * 0.06rem);
+  }
+  .yes:hover { filter: brightness(1.06); }
+  .no {
+    background: transparent;
+    color: var(--fg);
+    border-color: var(--muted);
+    white-space: nowrap;
+  }
+  .log {
+    margin: 0;
+    min-height: 1.5em;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  /* Answer details */
+  .facts {
+    margin: 0.5rem 0 0;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.75rem 1.5rem;
+    align-items: baseline;
+  }
+  .facts dt {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .facts dd { margin: 0; font-size: 1.25rem; font-weight: 600; }
+  .proof { margin: 0; max-width: 30rem; color: var(--muted); }
+
+  /* Her answer */
+  .choose, .done { display: flex; flex-direction: column; gap: 1.5rem; }
+  .field { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+  .field label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .field label span { text-transform: none; letter-spacing: 0; }
+  .own {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.6rem 1rem;
+    font: inherit;
+    color: var(--fg);
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 10px;
+  }
+  textarea.own { resize: vertical; line-height: 1.4; }
+  .own::placeholder { color: var(--muted); }
+  .own:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-color: var(--accent); }
+  .go, .send { background: var(--accent); color: var(--accent-ink); }
+  .go { align-self: flex-start; }
+  .go:disabled { opacity: 0.4; cursor: not-allowed; }
+  .send { display: inline-flex; align-items: center; text-decoration: none; }
+  .go:not(:disabled):hover, .send:hover { filter: brightness(1.06); }
+  .copy { background: transparent; color: var(--fg); border-color: var(--muted); }
+  .copy:hover { border-color: var(--fg); }
+  .facts dd { overflow-wrap: anywhere; }
+  .msg {
+    margin: 0;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+  .copyrow { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .copied { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); }
+  .status { margin: 0; font-size: 1.125rem; font-weight: 600; }
+
+  #fx {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="stage" id="stage" data-state="pending">
+  <header class="bar">
+    <code class="req" id="req">POST /invite</code>
+    <span class="pill"><i class="dot"></i><span id="pillText">pending</span></span>
+  </header>
+
+  <section class="ask" id="ask">
+    <p class="hey" id="hey">Hey you,</p>
+    <h1>Would you like to <em>go out</em> with me?</h1>
+    <p class="lede">I could have sent a message. I built a website instead.</p>
+    <div class="play">
+      <div class="arena" id="arena">
+        <span class="arena-label">/* choose one */</span>
+        <button class="btn yes" id="yes" type="button">Yes</button>
+        <button class="btn no" id="no" type="button">No</button>
+      </div>
+      <p class="log" id="log" aria-live="polite">awaiting reply…</p>
+    </div>
+  </section>
+
+  <section class="answer" id="answer" hidden>
+    <h1 id="aHead" tabindex="-1"><em id="aWord">Perfect</em><span id="aName"></span>.</h1>
+    <p class="lede" id="aLede">You choose where and when. Anywhere, anytime.</p>
+
+    <form class="choose" id="choose" novalidate>
+      <div class="field">
+        <label for="wherePick">Where</label>
+        <input class="own" id="wherePick" type="text" maxlength="80" placeholder="Wherever you like" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="whenPick">When</label>
+        <input class="own" id="whenPick" type="text" maxlength="80" placeholder="Whenever suits you" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="notePick">Anything else <span>(optional)</span></label>
+        <textarea class="own" id="notePick" rows="3" maxlength="300" placeholder="A wish, a question, a condition…"></textarea>
+      </div>
+      <button class="btn go" id="go" type="submit" disabled>Confirm</button>
+    </form>
+
+    <div class="done" id="done" hidden>
+      <dl class="facts">
+        <dt>Where</dt><dd id="where"></dd>
+        <dt>When</dt><dd id="when"></dd>
+        <dt id="noteT" hidden>Note</dt><dd id="note" hidden></dd>
+      </dl>
+      <p class="msg" id="msg"></p>
+      <p class="status" id="status" aria-live="polite" hidden></p>
+      <div class="copyrow" id="copyrow">
+        <a class="btn send" id="send" href="https://m.me/" target="_blank" rel="noopener" hidden>Send it on Messenger</a>
+        <button class="btn copy" id="copy" type="button">Copy my answer</button>
+        <span class="copied" id="copied" aria-live="polite"></span>
+      </div>
+      <p class="proof" id="proof">Send me this message. That makes it official.</p>
+    </div>
+  </section>
+</main>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script>
+(function () {
+  // Your Messenger username, the part after m.me/ (for example "john.rakoto").
+  // Leave it empty to hide the Messenger button.
+  var MESSENGER = "";
+
+  // On the deployed site this is "/api/notify": her answer is sent to your Telegram.
+  // Left empty, she sends the message herself (copy or Messenger).
+  var NOTIFY_URL = "/api/notify";
+
+  var stage = document.getElementById("stage");
+  var ask = document.getElementById("ask");
+  var answer = document.getElementById("answer");
+  var arena = document.getElementById("arena");
+  var yes = document.getElementById("yes");
+  var no = document.getElementById("no");
+  var log = document.getElementById("log");
+  var pillText = document.getElementById("pillText");
+  var req = document.getElementById("req");
+  var hey = document.getElementById("hey");
+  var aName = document.getElementById("aName");
+  var aHead = document.getElementById("aHead");
+
+  var aWord = document.getElementById("aWord");
+  var aLede = document.getElementById("aLede");
+  var choose = document.getElementById("choose");
+  var go = document.getElementById("go");
+  var wherePick = document.getElementById("wherePick");
+  var whenPick = document.getElementById("whenPick");
+  var notePick = document.getElementById("notePick");
+  var done = document.getElementById("done");
+  var msg = document.getElementById("msg");
+  var send = document.getElementById("send");
+  var copy = document.getElementById("copy");
+  var copied = document.getElementById("copied");
+  var proof = document.getElementById("proof");
+  var statusEl = document.getElementById("status");
+  var copyrow = document.getElementById("copyrow");
+
+  // Her answer is free text. Confirm unlocks once place and time are filled in.
+  function refresh() {
+    go.disabled = !(wherePick.value.trim() && whenPick.value.trim());
+  }
+  [wherePick, whenPick, notePick].forEach(function (el) {
+    el.addEventListener("input", refresh);
+  });
+
+  var handle = MESSENGER.trim();
+  if (handle) {
+    send.href = "https://m.me/" + encodeURIComponent(handle);
+    send.hidden = false;
+    proof.textContent = "Tap Messenger, paste the message in our chat and send it. That makes it official.";
+  }
+
+  function copyText(text, okMessage) {
+    function select() {
+      var r = document.createRange();
+      r.selectNodeContents(msg);
+      var s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+      copied.textContent = "Select the text above and copy it.";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        copied.textContent = okMessage;
+      }, select);
+    } catch (err) {
+      select();
+    }
+  }
+
+  // Sends her answer to the server function, which forwards it to Telegram.
+  function deliver(p, t, n) {
+    copyrow.hidden = true;
+    proof.hidden = true;
+    statusEl.hidden = false;
+    statusEl.textContent = "Sending your answer to me…";
+    pillText.textContent = "sending…";
+
+    function failed() {
+      statusEl.textContent = "It did not go through. Please send me this message yourself:";
+      copyrow.hidden = false;
+      proof.hidden = false;
+      pillText.textContent = "503 Unavailable";
+    }
+
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 10000);
+    fetch(NOTIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, where: p, when: t, note: n }),
+      signal: ctl.signal
+    }).then(function (r) {
+      clearTimeout(timer);
+      if (!r.ok) { failed(); return; }
+      statusEl.textContent = "Delivered. I have your answer. See you then.";
+      pillText.textContent = "201 Created";
+    }).catch(function () {
+      clearTimeout(timer);
+      failed();
+    });
+  }
+
+  choose.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var p = wherePick.value.trim(), t = whenPick.value.trim(), n = notePick.value.trim();
+    if (!p || !t) return;
+    document.getElementById("where").textContent = p;
+    document.getElementById("when").textContent = t;
+    document.getElementById("noteT").hidden = !n;
+    var noteEl = document.getElementById("note");
+    noteEl.hidden = !n;
+    noteEl.textContent = n;
+    msg.textContent = "Yes! Where: " + p + ". When: " + t + "." + (n ? " Also: " + n : "");
+    choose.hidden = true;
+    done.hidden = false;
+    aWord.textContent = "It's set";
+    aLede.textContent = "I'll be there. I'm already nervous, in a good way.";
+    pillText.textContent = "201 Created";
+    if (NOTIFY_URL) deliver(p, t, n);
+    try { aHead.focus({ preventScroll: true }); } catch (err) {}
+  });
+
+  copy.addEventListener("click", function () {
+    copyText(msg.textContent, "Copied");
+  });
+  // Opening Messenger also copies the message, so she only has to paste it.
+  send.addEventListener("click", function () {
+    copyText(msg.textContent, "Copied. Paste it in our chat.");
+  });
+
+  // Her name comes from the link: .../#Mialy or .../#Mialy-Rakoto
+  var name = "";
+  function readName() {
+    try {
+      var raw = decodeURIComponent(location.hash.slice(1));
+      name = raw.replace(/-/g, " ").replace(/[^\p{L}\p{N}' ]/gu, "").trim().slice(0, 24);
+    } catch (e) {
+      name = "";
+    }
+    hey.textContent = name ? "Hey " + name + "," : "Hey you,";
+    aName.textContent = name ? ", " + name : "";
+    req.textContent = "POST /invite" +(name ? "?to=" + name.replace(/ /g, "-") : "");
+  }
+  readName();
+  window.addEventListener("hashchange", readName);
+
+  // Dodging "No"
+  var LOGS = [
+    '404 · "No" not found',
+    '408 · "No" timed out. Try "Yes".',
+    "418 · I'm a teapot. I only serve yes.",
+    "429 · Too many attempts. Slow down.",
+    '500 · "No" crashed. Restart with "Yes".',
+    '503 · "No" is unavailable right now'
+  ];
+  var count = 0, tx = 0, ty = 0, last = 0;
+
+  function dodge(ev) {
+    if (ev && ev.preventDefault && ev.type === "click") ev.preventDefault();
+    var now = performance.now();
+    if (now - last < 250) return;
+    last = now;
+    count++;
+
+    if (count >= 6) no.textContent = "No (deprecated)";
+    arena.style.setProperty("--grow", Math.min(count, 5));
+    log.textContent = LOGS[(count - 1) % LOGS.length];
+    pillText.textContent = "retry " + count;
+
+    var aw = arena.clientWidth, ah = arena.clientHeight;
+    var bw = no.offsetWidth, bh = no.offsetHeight;
+    var m = 10, top = 30;
+    var rect = arena.getBoundingClientRect();
+    var px = ev && typeof ev.clientX === "number" && ev.clientX ? ev.clientX - rect.left : no.offsetLeft + tx + bw / 2;
+    var py = ev && typeof ev.clientY === "number" && ev.clientY ? ev.clientY - rect.top : no.offsetTop + ty + bh / 2;
+
+    var best = null, bestScore = -Infinity;
+    for (var i = 0; i < 30; i++) {
+      var x = m + Math.random() * Math.max(0, aw - bw - 2 * m);
+      var y = top + Math.random() * Math.max(0, ah - bh - top - m);
+      var d = Math.hypot(x + bw / 2 - px, y + bh / 2 - py);
+      var hitsYes = x < yes.offsetLeft + yes.offsetWidth + 8 && x + bw > yes.offsetLeft - 8 &&
+                    y < yes.offsetTop + yes.offsetHeight + 8 && y + bh > yes.offsetTop - 8;
+      var score = hitsYes ? d - 1000 : d;
+      if (score > bestScore) { bestScore = score; best = [x, y]; }
+      if (!hitsYes && d > 110) { best = [x, y]; break; }
+    }
+    tx = best[0] - no.offsetLeft;
+    ty = best[1] - no.offsetTop;
+    no.style.transform = "translate(" + tx + "px," + ty + "px)";
+  }
+
+  no.addEventListener("pointerenter", dodge);
+  no.addEventListener("pointerdown", dodge);
+  no.addEventListener("focus", dodge);
+  no.addEventListener("click", dodge);
+
+  window.addEventListener("resize", function () {
+    tx = 0; ty = 0;
+    no.style.transform = "";
+  });
+
+  // Hearts
+  function heart(ctx, x, y, s) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.35);
+    ctx.bezierCurveTo(x, y, x - s * 0.5, y, x - s * 0.5, y + s * 0.3);
+    ctx.bezierCurveTo(x - s * 0.5, y + s * 0.6, x, y + s * 0.8, x, y + s);
+    ctx.bezierCurveTo(x, y + s * 0.8, x + s * 0.5, y + s * 0.6, x + s * 0.5, y + s * 0.3);
+    ctx.bezierCurveTo(x + s * 0.5, y, x, y, x, y + s * 0.35);
+    ctx.fill();
+  }
+
+  function burst() {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var cv = document.getElementById("fx");
+    var ctx = cv.getContext("2d");
+    if (!ctx) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = cv.width = Math.round(innerWidth * dpr);
+    var h = cv.height = Math.round(innerHeight * dpr);
+    var cs = getComputedStyle(document.documentElement);
+    var cols = [cs.getPropertyValue("--accent").trim(), cs.getPropertyValue("--accent-soft").trim()];
+    var ps = [];
+    for (var i = 0; i < 60; i++) {
+      ps.push({
+        x: Math.random() * w,
+        y: h + Math.random() * h * 0.9,
+        s: (14 + Math.random() * 26) * dpr,
+        vy: (4 + Math.random() * 4) * dpr,
+        ph: Math.random() * 6.28,
+        sw: (8 + Math.random() * 18) * dpr,
+        rot: (Math.random() - 0.5) * 0.6,
+        c: cols[Math.random() < 0.6 ? 0 : 1]
+      });
+    }
+    var t = 0;
+    (function frame() {
+      ctx.clearRect(0, 0, w, h);
+      var alive = 0;
+      for (var j = 0; j < ps.length; j++) {
+        var p = ps[j];
+        p.y -= p.vy;
+        if (p.y < -p.s * 2) continue;
+        alive++;
+        ctx.save();
+        ctx.globalAlpha = 0.9 * Math.max(0, Math.min(1, p.y / (h * 0.45)));
+        ctx.fillStyle = p.c;
+        ctx.translate(p.x + Math.sin(p.ph + t * 0.03) * p.sw, p.y);
+        ctx.rotate(p.rot);
+        heart(ctx, 0, 0, p.s);
+        ctx.restore();
+      }
+      t++;
+      if (alive) requestAnimationFrame(frame); else ctx.clearRect(0, 0, w, h);
+    })();
+  }
+
+  yes.addEventListener("click", function () {
+    stage.dataset.state = "done";
+    ask.hidden = true;
+    answer.hidden = false;
+    pillText.textContent = "200 OK";
+    try { aHead.focus({ preventScroll: true }); } catch (e) {}
+    burst();
+  });
+})();
+</script>
+</body>
+</html>
